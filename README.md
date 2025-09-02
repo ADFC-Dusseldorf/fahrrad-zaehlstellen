@@ -9,4 +9,5 @@ In addition to the official website you will be able to:
 * view data by time of day
 
 # Libraries 
-[charts.js](https://www.chartjs.org/) is used for visualization.
+* [charts.js](https://www.chartjs.org/) is used for building the charts
+* [Water.css](https://watercss.kognise.dev/) is used as stylesheet 
