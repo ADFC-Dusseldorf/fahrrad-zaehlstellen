@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dauerz&auml;hlstellen Radverkehr</title>
+    <link rel="stylesheet" href="water.css">
+    <script src="chart.js"></script>
+    <style>
+        body {
+            max-width: initial;
+        }
+
+        form {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        #form {
+            padding-bottom: 1em;
+            z-index: 10;
+        }
+
+        form button {
+            flex-basis: 100%;
+        }
+
+        label {
+            margin-right: 0.5em;
+        }
+
+        .orange {
+            color: #ee7f00;
+        }
+
+        h2 {
+            z-index: 1;
+            background-color: white;
+            padding-bottom: 0.5em;
+        }
+
+        section {
+            background-color: white;
+        }
+
+        li {
+            margin-bottom: 1em;
+        }
+
+        #chartAreas {
+            display: none;
+        }
+
+        @media only screen and (min-width: 800px) {
+            #form {
+                position: sticky;
+                top: 0;
+                background-color: white;
+            }
+
+            body {
+                margin-left: 10%;
+                margin-right: 10%;
+            }
+
+            h2 {
+                position: sticky;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Fahrradz&auml;hlstellen der Stadt D&uuml;sseldorf</h1>
+    <div id="form">
+        <form>
+            <div><label for="name">Z&auml;hlstelle:</label>
+                <select id="name" name="name" required>
+                    <option value="">- bitte w&auml;hlen -</option>
+                </select>
+            </div>
+            <div>
+                <label for="start" required>Von:</label>
+                <input type="date" id="start" name="start" required>
+            </div>
+            <div>
+                <label for="ende">Bis:</label>
+                <input type="date" id="ende" name="ende" required>
+            </div>
+            <button id="load">Daten anzeigen</button>
+        </form>
+        <strong>Achtung:</strong> mit Klick auf den Button &quot;Daten anzeigen&quot; werden die Daten von der API
+        geladen. Dies kann einige Zeit in Anspruch nehmen. Deine IP-Adresse wird mit Klick auf den Button an die
+        <a href="https://de.eco-counter.com/" target="_blank">Eco Counter GmbH</a> &uuml;bertragen.
+    </div>
+    <div id="chartAreas">
+        <section>
+            <h2>Ausgew&auml;hle Daten</h2>
+            <div id="summary"></div>
+        </section>
+        <section>
+            <h2>Pro Monat</h2>
+            <canvas id="monthly"></canvas>
+        </section>
+        <section>
+            <h2>Pro Tag</h2>
+            <canvas id="daily"></canvas>
+        </section>
+        <section>
+            <h2>Pro Wochentag</h2>
+            <canvas id="weekday"></canvas>
+        </section>
+        <section>
+            <h2>Pro Stunde</h2>
+            <canvas id="hour"></canvas>
+        </section>
+    </div>
+    <h2>Hinweise</h2>
+    <ul>
+        <li>
+            Diese Seite stellt die Daten der Fahrradz&auml;hlstellen in D&uuml;sseldorf zur Verf&uuml;gung.<br>
+            Die Daten k&ouml;nnen im original auf folgender Seite abgerufen werden:
+            <a href="https://data.eco-counter.com/ParcPublic/?id=857#" target="_blank">Fahrradz&auml;hlstellen</a>.
+        </li>
+        
+        <li>Die Z&auml;hlstelle Friedrichstra&szlig;e liefert nur bis zum 14. November 2022 Daten.</li>
+        <li>Die Z&auml;hlstelle Luegalle liefert nur bis zum 26. M&auml;rz 2024 Daten.<br>
+            Eine Anfrage bei der Stadt D&uuml;sseldorf, ob die Z&auml;hlstelle wieder in Betrieb geht, wurde bisher nicht beantwortet.</li>
+        <li>
+            Weitere Informationen zu den Z&auml;hlstellen und den Daten findest du auf der <a
+                href="https://www.duesseldorf.de/radverkehr/fahrradzaehlstellen" target="_blank">Homepage der Stadt
+                D&uuml;sseldorf</a>.</li>
+        <li>
+            Wir speichern keine Daten und nutzen keine Cookies. Deswegen gibt es hier auch keine Datenschutzabfrage.<br>
+            Erst wenn du auf &quot;Daten anzeigen&quot; klickst wird deine IP-Adresse an die Eco Counter GmbH
+            übertragen.
+            Bei Fragen dazu wende dich bitte an die <a href="https://www.duesseldorf.de/radverkehr/fahrradzaehlstellen"
+                target="_blank">Stadt
+                D&uuml;sseldorf</a> oder die <a href="https://de.eco-counter.com/" target="_blank">Eco Counter GmbH</a>.
+        </li>
+        
+    </ul>
+
+    <footer>
+        <p>Vom ADFC Düsseldorf e.V. mit <span class="orange">♥</span> erstellt.</p>
+        <p><a href="https://duesseldorf.adfc.de/impressum">Impressum</a> | <a
+                href="https://duesseldorf.adfc.de/datenschutz">Datenschutz</a></p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            setHeight();
+        });
+
+        window.addEventListener('resize', function () {
+            setHeight();
+            // Your code for when the window is resized
+        });
+
+        function setHeight() {
+            const top = document.getElementById('form');
+            const h2 = document.querySelectorAll('h2'); // Select all h2 elements with class 'sticky'
+
+
+            // Get the height of the first sticky element
+            const topHeight = top.offsetHeight;
+
+
+            h2.forEach((stickyElement, index) => {
+                // Set the top based on the height of the previous sticky elements
+                const topValue = topHeight + (stickyElement.offsetHeight) - (stickyElement.offsetHeight);
+                stickyElement.style.top = `${topValue}px`;
+            });
+        }
+
+        document.getElementById('load').addEventListener('click', function (event) {
+            event.preventDefault();
+            load();
+
+        });
+
+
+        document.getElementById('ende').valueAsDate = new Date();
+        document.getElementById('start').valueAsDate = new Date(new Date().setDate(new Date().getDate() - 14));
+
+        stationen = [
+            { id: "353243665", name: "Mannesmannufer", t: "261ee05c3da6bfd2e1b250f1d2fa751b609884f98e7f4d9892ce5a311bf70f4a" },
+            { id: "100047280", name: "Oberkasselerbrücke, gesamt", t: "c1d1f6966dc526e0e4ac3e0f66d8ce784ffc9a4a705dee8de87f87e6de85c79d" },
+            { id: "101047280", name: "Oberkasselerbrücke, Richtung Oberkassel", t: "c1d1f6966dc526e0e4ac3e0f66d8ce784ffc9a4a705dee8de87f87e6de85c79d" },
+            { id: "102047280", name: "Oberkasselerbrücke, Richtung Innenstadt", t: "c1d1f6966dc526e0e4ac3e0f66d8ce784ffc9a4a705dee8de87f87e6de85c79d" },
+            { id: "100047279", name: "Koblenzer Straße", t: "de34ee0b45812d0c0865d961f278613319f8d7437a47e542ae20b79053cd0364" },
+            { id: "100005014", name: "Kö / Steinstraße, gesamt", t: "d3e8c56843065ec398bf00e459e05692a2ade4983b9b93b312d0e1f564e5afcd" },
+            { id: "101005014", name: "Kö / Steinstraße, IN 1", t: "d3e8c56843065ec398bf00e459e05692a2ade4983b9b93b312d0e1f564e5afcd" },
+            { id: "353234440", name: "Kö / Steinstraße, IN 2", t: "d3e8c56843065ec398bf00e459e05692a2ade4983b9b93b312d0e1f564e5afcd" },
+            { id: "102005014", name: "Kö / Steinstraße, OUT 1", t: "d3e8c56843065ec398bf00e459e05692a2ade4983b9b93b312d0e1f564e5afcd" },
+            { id: "353234440", name: "Kö / Steinstraße, OUT 2", t: "d3e8c56843065ec398bf00e459e05692a2ade4983b9b93b312d0e1f564e5afcd" },
+            { id: "100047054", name: "Fleher Deich, gesamt", t: "e3b0d32742e5ba7f11b8da85d798b82019630e25f3c3c24cca2b998f213d1eaa" },
+            { id: "101047054", name: "Fleher Deich, Stadteinwärts 1", t: "e3b0d32742e5ba7f11b8da85d798b82019630e25f3c3c24cca2b998f213d1eaa" },
+            { id: "103047054", name: "Fleher Deich, Stadteinwärts 2", t: "e3b0d32742e5ba7f11b8da85d798b82019630e25f3c3c24cca2b998f213d1eaa" },
+            { id: "105047054", name: "Fleher Deich, Stadteinwärts 3", t: "e3b0d32742e5ba7f11b8da85d798b82019630e25f3c3c24cca2b998f213d1eaa" },
+            { id: "102047054", name: "Fleher Deich, Stadtauswärts 1", t: "e3b0d32742e5ba7f11b8da85d798b82019630e25f3c3c24cca2b998f213d1eaa" },
+            { id: "104047054", name: "Fleher Deich, Stadtauswärts 2", t: "e3b0d32742e5ba7f11b8da85d798b82019630e25f3c3c24cca2b998f213d1eaa" },
+            { id: "100011631", name: "Kirchfeldstraße, gesamt", t: "eba60272d4d833fb74e84b046d435eded41d803eccd6787eafee6bde89459c77" },
+            { id: "101011631", name: "Kirchfeldstraße, IN 1", t: "eba60272d4d833fb74e84b046d435eded41d803eccd6787eafee6bde89459c77" },
+            { id: "353234645", name: "Kirchfeldstraße, IN 2", t: "eba60272d4d833fb74e84b046d435eded41d803eccd6787eafee6bde89459c77" },
+            { id: "353234647", name: "Kirchfeldstraße, IN 3", t: "eba60272d4d833fb74e84b046d435eded41d803eccd6787eafee6bde89459c77" },
+            { id: "102011631", name: "Kirchfeldstraße, OUT 1", t: "eba60272d4d833fb74e84b046d435eded41d803eccd6787eafee6bde89459c77" },
+            { id: "353234648", name: "Kirchfeldstraße, OUT 2", t: "eba60272d4d833fb74e84b046d435eded41d803eccd6787eafee6bde89459c77" },
+            { id: "353234650", name: "Kirchfeldstraße, OUT 3", t: "eba60272d4d833fb74e84b046d435eded41d803eccd6787eafee6bde89459c77" },
+            { id: "100047281", name: "Fleher Deich Rampe, gesamt", t: "933fdd4c6de986402f1dd6be8ec814f4a7273e531cd015371721889b64241d28" },
+            { id: "101047281", name: "Fleher Deich Rampe, abwärts", t: "933fdd4c6de986402f1dd6be8ec814f4a7273e531cd015371721889b64241d28" },
+            { id: "102047281", name: "Fleher Deich Rampe, aufwärts", t: "933fdd4c6de986402f1dd6be8ec814f4a7273e531cd015371721889b64241d28" },
+            { id: "100011637", name: "Christophstr., gesamt", t: "2d1ef97cb1aa8cc702fd063d8d53fa0243a17bb154f1ff8df782bd88014cbdf2" },
+            { id: "101011637", name: "Christophstr., stadtauswärts", t: "2d1ef97cb1aa8cc702fd063d8d53fa0243a17bb154f1ff8df782bd88014cbdf2" },
+            { id: "102011637", name: "Christophstr., stadteinwärts", t: "2d1ef97cb1aa8cc702fd063d8d53fa0243a17bb154f1ff8df782bd88014cbdf2" },
+            { id: "100011632", name: 'Lohauser Deich, gesamt', t: '17990e206eb15029a2dafe56f1d08f62f2555fcbebfc60e29257903025543171' },
+            { id: "101011632", name: 'Lohauser Deich, Stadteinwärts 1', t: '17990e206eb15029a2dafe56f1d08f62f2555fcbebfc60e29257903025543171' },
+            { id: "353234683", name: 'Lohauser Deich, Stadteinwärts 2', t: '17990e206eb15029a2dafe56f1d08f62f2555fcbebfc60e29257903025543171' },
+            { id: "102011632", name: 'Lohauser Deich, Stadtauswärts 1', t: '17990e206eb15029a2dafe56f1d08f62f2555fcbebfc60e29257903025543171' },
+            { id: "353234685", name: 'Lohauser Deich, Stadtauswärts 2', t: '17990e206eb15029a2dafe56f1d08f62f2555fcbebfc60e29257903025543171' },
+            { id: '353350961', name: 'Hofgartenrampe Oederallee, gesamt', t: '1cba06081d25d39e47a32aeb385dba223df9959cb10c6d26a655aa739464c5c5' },
+            { id: '353350959', name: 'Hofgartenrampe Oederallee, Ri. Innenstadt', t: '1cba06081d25d39e47a32aeb385dba223df9959cb10c6d26a655aa739464c5c5' },
+            { id: '353350960', name: 'Hofgartenrampe Oederallee, Ri. Oberkassel', t: '1cba06081d25d39e47a32aeb385dba223df9959cb10c6d26a655aa739464c5c5' },
+            { id: '100046689', name: 'Bilker Allee, gesamt', t: 'b6c498949836262acc12f0ac86db1dd94ff5d1cb2633e35d26f52567c3f5e472' },
+            { id: '101046689', name: 'Bilker Allee, Stadteinwärts', t: 'b6c498949836262acc12f0ac86db1dd94ff5d1cb2633e35d26f52567c3f5e472' },
+            { id: '102046689', name: 'Bilker Allee, Stadtauswärts', t: 'b6c498949836262acc12f0ac86db1dd94ff5d1cb2633e35d26f52567c3f5e472' },
+            { id: "100047053", name: "Münchener/Ickeswarder Str, gesamt", t: "fa005d8cbd7b71173b99795549c08ec00effd5ed71a6c86d9dbe3ac11d4d7836" },
+            { id: "101047053", name: "Münchener/Ickeswarder Str, Stadteinwärts 1", t: "fa005d8cbd7b71173b99795549c08ec00effd5ed71a6c86d9dbe3ac11d4d7836" },
+            { id: "103047053", name: "Münchener/Ickeswarder Str, Stadteinwärts 2", t: "fa005d8cbd7b71173b99795549c08ec00effd5ed71a6c86d9dbe3ac11d4d7836" },
+            { id: "102047053", name: "Münchener/Ickeswarder Str, Stadtauswärts 1", t: "fa005d8cbd7b71173b99795549c08ec00effd5ed71a6c86d9dbe3ac11d4d7836" },
+            { id: "104047053", name: "Münchener/Ickeswarder Str, Stadtauswärts 2", t: "fa005d8cbd7b71173b99795549c08ec00effd5ed71a6c86d9dbe3ac11d4d7836" },
+            { id: "101033660", name: "Elisabethstr, gesamt", t: "56ce05e4464f111516309843793bf6a05c398e7346efed431990af8f3baf1a9b" },
+            { id: "101033615", name: "Friedrichstr, gesamt", t: "103d85e887838e830d8c2a30184d94d817ff8c6679f3efaf85fc7aefdba04992" },
+            { id: "353377952", name: "Luegallee, gesamt", t: "da398571895900a9ef954941a8a9c7fd55db9f18043e849977b06cffb0917920" },
+            { id: "353377950", name: "Luegallee, Stadteinwärts", t: "da398571895900a9ef954941a8a9c7fd55db9f18043e849977b06cffb0917920" },
+            { id: "353377951", name: "Luegallee, Stadtauswärts", t: "da398571895900a9ef954941a8a9c7fd55db9f18043e849977b06cffb0917920" }
+
+        ];
+
+        // Get the <select> element by its id
+        const selectElement = document.getElementById("name");
+
+        // Iterate over the stationen array and create <option> elements for each station
+        stationen.forEach(station => {
+            const option = document.createElement("option");
+            option.value = station.id;  // Use id as the value of the option
+            option.textContent = station.name;  // Use name as the displayed text
+
+            // Append the option to the select element
+            selectElement.appendChild(option);
+        });
+        function findTokenById(id) {
+            const station = stationen.find(station => station.id === id);
+            return station ? station.t : null;  // If found, return token; otherwise, return null
+        }
+        function findNameById(id) {
+            const station = stationen.find(station => station.id === id);
+            return station ? station.name : null;  // If found, return token; otherwise, return null
+        }
+        /**
+* Fetches a JSON file from a URL and returns the content as a JavaScript array.
+* @param {string} url - The URL to fetch the JSON from.
+* @returns {Promise<Array>} - A promise that resolves to a JavaScript array.
+*/
+        async function fetchJsonAsArray(url) {
+            try {
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (!Array.isArray(data)) {
+                    throw new Error("Fetched JSON is not an array.");
+                }
+                const parsedArray = data.map(item => ({
+                    ...item,
+                    date: new Date(item.timestamp) // or use new Date(item.timestamp)
+                }));
+                return parsedArray;
+            } catch (error) {
+                console.error(`Error fetching or parsing JSON: ${error.message}`);
+                throw error;
+            }
+        }
+        function printDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}${month}${day}`;
+        }
+
+        function load() {
+            station = document.getElementById('name').value;
+            if (station === "") {
+                alert("Bitte Zählstelle auswählen");
+                return;
+            }
+            if (document.getElementById('start').value === "") {
+                alert("Bitte Startdatum auswählen");
+                return;
+            }
+            if (document.getElementById('ende').value === "") {
+                alert("Bitte Enddatum auswählen");
+                return;
+            }
+            end = new Date(document.getElementById('ende').value);
+            start = new Date(document.getElementById('start').value);
+            
+            document.getElementById('summary').innerHTML += "<br>Warten auf Aktualisierung ...";
+            url = 'https://www.eco-visio.net/api/aladdin/1.0.0/pbl/publicwebpage/data/' + station + '?begin=' + printDate(start) + '&end=' + printDate(end) + '&step=3&domain=857&withNull=true&t=' + findTokenById(station);
+
+            fetchJsonAsArray(url)
+                .then(dataArray => {
+                    if(dataArray.length === 0) {
+                        alert("Keine Daten gefunden");
+                        return;
+                    }
+                    createChart(dataArray);
+                    document.getElementById('summary').innerHTML = "Z&auml;hlstelle: " + findNameById(station) + "; Zeitraum von " + start.toLocaleDateString() + " bis " + end.toLocaleDateString();
+                    var chartArea = document.getElementById("chartAreas");
+                    if (chartArea.style.display === "" || chartArea.style.display === "none") {
+                        chartArea.style.display = "block";
+                    }
+                })
+                .catch(error => {
+                    console.error("Failed to fetch JSON array:", error);
+                });
+        }
+
+        dailyC = null;
+        weekdayC = null;
+        monthlyC = null;
+        hourlyC = null;
+
+        function createChart(data) {
+            const daily = document.getElementById('daily');
+            const weekday = document.getElementById('weekday');
+            const monthly = document.getElementById('monthly');
+            const hourly = document.getElementById('hour');
+
+            if (dailyC) {
+                dailyC.destroy();
+                weekdayC.destroy();
+                monthlyC.destroy();
+                hourlyC.destroy();
+            }
+
+            dailyData = aggregateByDay(data);
+            dailyC = new Chart(daily, {
+                type: 'bar',
+                data: {
+                    labels: dailyData.map(row => row.grouping),
+                    datasets: [{
+                        label: 'Radfahrer gesamt',
+                        data: dailyData.map(row => row.comptage),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            weekdayData = aggregateByWeekday(data);
+            weekdayC = new Chart(weekday, {
+                type: 'bar',
+                data: {
+                    labels: weekdayData.map(row => row.dayOfWeek),
+                    datasets: [{
+                        label: 'Durchschnitt pro Tag',
+                        data: weekdayData.map(row => parseInt(row.comptage)),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            monthlyData = aggregateByMonth(data);
+            monthlyDataAvg = aggregateByMonthDailyAvg(data);
+
+            monthlyC = new Chart(monthly, {
+                type: 'bar',
+                data: {
+                    labels: monthlyData.map(row => row.grouping),
+                    datasets: [{
+                        label: 'Radfahrer gesamt',
+                        data: monthlyData.map(row => row.comptage),
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Durchschnitt pro Tag',
+                        type: 'line',
+                        data: monthlyDataAvg.map(row => parseInt(row.comptage)),
+                        borderWidth: 1,
+                        yAxisID: 'y2'
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Radfahrer gesamt'
+                            }
+                        }
+                        ,
+                        y2: { // Secondary Y-axis
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Durchschnitt pro Tag'
+                            },
+                            position: 'right', // Position the secondary axis on the right
+                            beginAtZero: true, // Optional: set the secondary axis to begin at zero
+                            grid: {
+                                drawOnChartArea: false // Hide grid lines for the secondary axis
+                            }
+                        }
+                    }
+                }
+            });
+
+            hourlyData = aggregateByHour(data);
+            hourlyMoData = aggregateByHourMoFr(data);
+            hourlySaData = aggregateByHourSaSo(data);
+            hourlyC = new Chart(hourly, {
+                type: 'line',
+                data: {
+                    labels: hourlyData.map(row => row.grouping),
+                    datasets: [{
+                        label: 'Durchschnitt gesamte Woche (Mo - So)',
+                        data: hourlyData.map(row => parseInt(row.comptage)),
+                        borderWidth: 1
+                    }, {
+                        label: 'Durchschnitt Wochentage (Mo - Fr)',
+                        data: hourlyMoData.map(row => parseInt(row.comptage)),
+                        borderWidth: 1
+                    }, {
+                        label: 'Durchschnitt Wochenende (Sa - So)',
+                        data: hourlySaData.map(row => parseInt(row.comptage)),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Stunde'
+                            }
+                        }, y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+        }
+
+        function aggregateByWeekday(data) {
+
+            const aggregated = {};
+
+            data.forEach(item => {
+                const date = new Date(item.date);
+                const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+                if (!aggregated[dayOfWeek]) {
+                    aggregated[dayOfWeek] = { sum: 0, count: 0 };
+                }
+
+                aggregated[dayOfWeek].sum += item.comptage;
+                aggregated[dayOfWeek].count += 1;
+            });
+
+            const resultArray = Object.keys(aggregated).map(day => {
+                const dayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+                const { sum, count } = aggregated[day];
+                return {
+                    dayOfWeek: dayNames[parseInt(day)],  // Ensure the key is converted back to a number
+                    comptage: sum / count * 24
+                };
+            });
+            resultArray.push(resultArray.shift());
+            return resultArray;
+        }
+
+
+        function aggregateByMonthDailyAvg(data) {
+
+            const aggregated = {};
+
+            data.forEach(item => {
+                const date = new Date(item.date);
+                const grouping = date.getFullYear() + ' - ' + (1 + date.getMonth()); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+                if (!aggregated[grouping]) {
+                    aggregated[grouping] = { sum: 0, count: 0 };
+                }
+
+                aggregated[grouping].sum += item.comptage;
+                aggregated[grouping].count += 1;
+            });
+
+            const resultArray = Object.keys(aggregated).map(record => {
+                const { sum, count } = aggregated[record];
+                return {
+                    grouping: record,  // Ensure the key is converted back to a number
+                    comptage: sum / count * 24
+
+                };
+            });
+
+            return resultArray;
+        }
+
+        function aggregateByMonth(data) {
+
+            const aggregated = {};
+
+            data.forEach(item => {
+                const date = new Date(item.date);
+                const grouping = date.getFullYear() + ' - ' + (1 + date.getMonth()); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+                if (!aggregated[grouping]) {
+                    aggregated[grouping] = 0;
+                }
+
+                aggregated[grouping] += item.comptage;
+            });
+
+            const resultArray = Object.keys(aggregated).map(record => {
+                return {
+                    grouping: record,  // Ensure the key is converted back to a number
+                    comptage: aggregated[record]
+                };
+            });
+
+            return resultArray;
+        }
+
+        function aggregateByDay(data) {
+
+            const aggregated = {};
+
+            data.forEach(item => {
+                const date = new Date(item.date);
+                const grouping = date.toISOString().split('T')[0]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+                if (!aggregated[grouping]) {
+                    aggregated[grouping] = 0;
+                }
+
+                aggregated[grouping] += item.comptage;
+            });
+
+            const resultArray = Object.keys(aggregated).map(record => {
+                return {
+                    grouping: record,  // Ensure the key is converted back to a number
+                    comptage: aggregated[record]
+                };
+            });
+
+            return resultArray;
+
+        }
+
+        function aggregateByHour(data) {
+
+            const aggregated = {};
+
+            data.forEach(item => {
+                const date = new Date(item.date);
+                const grouping = date.getUTCHours();
+
+                if (!aggregated[grouping]) {
+                    aggregated[grouping] = { sum: 0, count: 0 };;
+                }
+
+                aggregated[grouping].sum += item.comptage;
+                aggregated[grouping].count += 1;
+            });
+
+            const resultArray = Object.keys(aggregated).map(record => {
+                const { sum, count } = aggregated[record];
+                return {
+                    grouping: parseInt(record),  // Ensure the key is converted back to a number
+                    comptage: sum / count
+                };
+            });
+
+            return resultArray;
+
+        }
+
+        function aggregateByHourMoFr(data) {
+
+            const aggregated = {};
+
+            data.forEach(item => {
+                const date = new Date(item.date);
+                const dayOfWeek = date.getUTCDay();
+                const grouping = date.getUTCHours();
+
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    if (!aggregated[grouping]) {
+                        aggregated[grouping] = { sum: 0, count: 0 };
+                    }
+
+                    aggregated[grouping].sum += item.comptage;
+                    aggregated[grouping].count += 1;
+                }
+            });
+
+            const resultArray = Object.keys(aggregated).map(record => {
+                const { sum, count } = aggregated[record];
+                return {
+                    grouping: parseInt(record),  // Ensure the key is converted back to a number
+                    comptage: sum / count
+                };
+            });
+
+            return resultArray;
+
+        }
+
+        function aggregateByHourSaSo(data) {
+
+            const aggregated = {};
+
+            data.forEach(item => {
+                const date = new Date(item.date);
+                const dayOfWeek = date.getUTCDay();
+                const grouping = date.getUTCHours();
+
+                if (dayOfWeek == 0 || dayOfWeek == 6) {
+                    if (!aggregated[grouping]) {
+                        aggregated[grouping] = { sum: 0, count: 0 };
+                    }
+
+                    aggregated[grouping].sum += item.comptage;
+                    aggregated[grouping].count += 1;
+                }
+            });
+
+            const resultArray = Object.keys(aggregated).map(record => {
+                const { sum, count } = aggregated[record];
+                return {
+                    grouping: parseInt(record),  // Ensure the key is converted back to a number
+                    comptage: sum / count
+                };
+            });
+
+            return resultArray;
+        }
+    </script>
+</body>
+
+</html>
