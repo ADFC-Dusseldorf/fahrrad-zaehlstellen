@@ -1,0 +1,60 @@
+body {
+            max-width: initial;
+        }
+
+        form {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        #form {
+            padding-bottom: 1em;
+            z-index: 10;
+        }
+
+        form button {
+            flex-basis: 100%;
+        }
+
+        label {
+            margin-right: 0.5em;
+        }
+
+        .orange {
+            color: #ee7f00;
+        }
+
+        h2 {
+            z-index: 1;
+            background-color: white;
+            padding-bottom: 0.5em;
+        }
+
+        section {
+            background-color: white;
+        }
+
+        li {
+            margin-bottom: 1em;
+        }
+
+        #chartAreas {
+            display: none;
+        }
+
+        @media only screen and (min-width: 800px) {
+            #form {
+                position: sticky;
+                top: 0;
+                background-color: white;
+            }
+
+            body {
+                margin-left: 10%;
+                margin-right: 10%;
+            }
+
+            h2 {
+                position: sticky;
+            }
+        }
